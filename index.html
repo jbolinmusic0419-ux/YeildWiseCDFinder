@@ -381,11 +381,6 @@ function submitAll() {
     const val = document.getElementById("fb").value;
     feedback[q.id] = val;
 
-    // Build a payload that includes:
-    // - name, email
-    // - all answers
-    // - feedback
-    // - results (bank names + links)
     const payload = {
         firstName: answers.firstName,
         email: answers.email,
@@ -394,12 +389,18 @@ function submitAll() {
         results: builtResults
     };
 
-    // For now, just log it.
-    // Later, you can POST this to Apps Script to:
-    // - store in Google Sheets
-    // - send an email with the results
     console.log("Final payload to send:", payload);
 
+    // ⭐ SEND TO GOOGLE APPS SCRIPT ⭐
+    fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    }).catch(err => console.error("Error sending to Apps Script:", err));
+
+    // Show the thank‑you screen AFTER sending
     endScreen();
 }
 
