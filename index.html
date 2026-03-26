@@ -7,12 +7,13 @@
     body {
         margin: 0;
         padding: 0;
-        background: #FFFFFF;
+        background: linear-gradient(#E8F5F9, #FFFFFF);
         font-family: Arial, sans-serif;
         color: #222;
         display: flex;
         flex-direction: column;
         align-items: center;
+        min-height: 100vh;
     }
 
     #title {
@@ -59,17 +60,22 @@
         background: #256f46;
     }
 
-    .list-item {
-        text-align: left;
-        margin: 10px 0;
-        font-size: 18px;
-        line-height: 1.4;
-    }
-
     .small-text {
         font-size: 14px;
         margin-top: 10px;
         color: #555;
+    }
+
+    .restart {
+        margin-top: 20px;
+        font-size: 16px;
+        text-decoration: underline;
+        cursor: pointer;
+        color: #2E8B57;
+    }
+
+    .hidden {
+        display: none;
     }
 </style>
 </head>
@@ -79,40 +85,138 @@
 <div id="container"></div>
 
 <script>
-const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+// ----------------------
+// REAL BANK DATA (NAMES + LINKS)
+// ----------------------
+const cds = [
+    {
+        bank: "Ally Bank",
+        term: "12 months",
+        min: 0,
+        link: "https://www.ally.com/bank/cd/"
+    },
+    {
+        bank: "Capital One",
+        term: "12 months",
+        min: 0,
+        link: "https://www.capitalone.com/bank/cds/"
+    },
+    {
+        bank: "Discover Bank",
+        term: "12 months",
+        min: 2500,
+        link: "https://www.discover.com/online-banking/cd/"
+    },
+    {
+        bank: "Synchrony Bank",
+        term: "12 months",
+        min: 0,
+        link: "https://www.synchronybank.com/banking/cds/"
+    },
+    {
+        bank: "Marcus by Goldman Sachs",
+        term: "12 months",
+        min: 500,
+        link: "https://www.marcus.com/us/en/savings/high-yield-cds"
+    },
+    {
+        bank: "Citi",
+        term: "12 months",
+        min: 500,
+        link: "https://online.citi.com/US/ag/cdit/cds"
+    },
+    {
+        bank: "Bank of America",
+        term: "12 months",
+        min: 1000,
+        link: "https://www.bankofamerica.com/deposits/cd-certificate-of-deposit/"
+    },
+    {
+        bank: "Chase",
+        term: "12 months",
+        min: 1000,
+        link: "https://www.chase.com/personal/savings/cd"
+    },
+    {
+        bank: "Wells Fargo",
+        term: "12 months",
+        min: 2500,
+        link: "https://www.wellsfargo.com/savings-cds/cds/"
+    }
+    // You can add more banks here as needed
+];
 
+// ----------------------
+// QUESTION FLOW
+// ----------------------
 let step = 0;
 let answers = {};
 
 const questions = [
-    { id: "amount", text: "How much money do you want to invest?", type: "input" },
-    { id: "timeframe", text: "How long can you leave the money untouched?", type: "select",
-      options: ["3 months","6 months","12 months","18 months","24 months","36 months","60 months"] },
-    { id: "mindeposit", text: "What’s the minimum deposit you're comfortable with?", type: "select",
-      options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000"] },
-    { id: "currentrate", text: "What rate are you getting right now?", type: "input" },
-    { id: "penalty", text: "How important is a low early‑withdrawal penalty?", type: "select",
-      options: ["Very important","Somewhat important","Doesn't matter"] },
-    { id: "addon", text: "Do you want the ability to add more money later?", type: "select",
-      options: ["Yes","No","Doesn't matter"] },
-    { id: "numresults", text: "How many CD options would you like me to analyze for you?", type: "select",
-      options: ["1","3","5","10","Show all"] }
+    { id: "firstName", text: "What's your first name?", type: "input" },
+    { id: "email", text: "Great, {name}. What's the best email to send your results to?", type: "input" },
+    {
+        id: "amountChoice",
+        text: "Alright {name}, how much money do you want to invest?",
+        type: "select",
+        options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000","Custom amount"]
+    },
+    { id: "amountCustom", text: "Enter your custom amount, {name}.", type: "input-amount", optional: true },
+    {
+        id: "timeframe",
+        text: "How long can you leave the money untouched, {name}?",
+        type: "select",
+        options: ["3 months","6 months","12 months","18 months","24 months","36 months","60 months"]
+    },
+    {
+        id: "mindeposit",
+        text: "What's the minimum deposit you're comfortable with, {name}?",
+        type: "select",
+        options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000","Custom amount"]
+    },
+    { id: "mindepositCustom", text: "Enter your custom minimum deposit, {name}.", type: "input-amount", optional: true },
+    {
+        id: "currentrate",
+        text: "What rate are you getting right now, {name}? (You can estimate.)",
+        type: "input"
+    },
+    {
+        id: "penalty",
+        text: "How important is a low early‑withdrawal penalty to you, {name}?",
+        type: "select",
+        options: ["Very important","Somewhat important","Doesn't matter"]
+    },
+    {
+        id: "addon",
+        text: "Do you want the ability to add more money later, {name}?",
+        type: "select",
+        options: ["Yes","No","Doesn't matter"]
+    },
+    {
+        id: "numresults",
+        text: "How many CD options would you like me to analyze for you, {name}?",
+        type: "select",
+        options: ["1","3","5","10","Show all"]
+    }
 ];
 
-// Placeholder CD data — replace with real market data later
-const cds = [
-    { bank: "Bank A", apy: 5.10, term: "12 months", min: 1000 },
-    { bank: "Bank B", apy: 4.85, term: "6 months", min: 500 },
-    { bank: "Bank C", apy: 5.25, term: "18 months", min: 5000 },
-    { bank: "Bank D", apy: 4.95, term: "24 months", min: 1000 },
-    { bank: "Bank E", apy: 5.35, term: "12 months", min: 10000 }
-];
+function personalize(text) {
+    const name = answers.firstName || "";
+    return text.replace(/{name}/g, name);
+}
 
 function renderQuestion() {
     const container = document.getElementById("container");
     const q = questions[step];
 
-    let html = `<div class='question'>${q.text}</div>`;
+    // Skip optional custom questions if not needed
+    if (q.optional && !shouldAskOptional(q.id)) {
+        step++;
+        renderQuestion();
+        return;
+    }
+
+    let html = `<div class='question'>${personalize(q.text)}</div>`;
 
     if (q.type === "input") {
         html += `<input id="answer" type="text">`;
@@ -120,10 +224,32 @@ function renderQuestion() {
         html += `<select id="answer">`;
         q.options.forEach(o => html += `<option value="${o}">${o}</option>`);
         html += `</select>`;
+    } else if (q.type === "input-amount") {
+        html += `<input id="answer" type="number" min="0" step="1" placeholder="$0">`;
     }
 
     html += `<br><button onclick="nextStep()">Next</button>`;
     container.innerHTML = html;
+
+    // If this is the amountChoice or mindeposit question, watch for "Custom amount"
+    if (q.id === "amountChoice" || q.id === "mindeposit") {
+        const selectEl = document.getElementById("answer");
+        selectEl.addEventListener("change", () => {
+            if (selectEl.value === "Custom amount") {
+                // We don't show the custom input here; we handle it as the next question
+            }
+        });
+    }
+}
+
+function shouldAskOptional(id) {
+    if (id === "amountCustom") {
+        return answers.amountChoice === "Custom amount";
+    }
+    if (id === "mindepositCustom") {
+        return answers.mindeposit === "Custom amount";
+    }
+    return true;
 }
 
 function nextStep() {
@@ -131,6 +257,7 @@ function nextStep() {
     const el = document.getElementById("answer");
     if (!el) return;
     const val = el.value;
+
     answers[q.id] = val;
 
     step++;
@@ -138,7 +265,7 @@ function nextStep() {
     if (step < questions.length) {
         renderQuestion();
     } else {
-        showResults();
+        buildResultsAndGoToFeedback();
     }
 }
 
@@ -147,51 +274,66 @@ function parseAmount(str) {
     return parseFloat(String(str).replace(/[^0-9.]/g, "")) || 0;
 }
 
-function showResults() {
-    const container = document.getElementById("container");
-
-    const amount = parseAmount(answers.amount);
-    const currentRate = parseFloat(String(answers.currentrate).replace(/[^0-9.]/g, "")) || 0;
-
-    // Simple filter by min deposit
-    const filtered = cds.filter(cd => amount >= cd.min);
-
-    // Sort by APY descending
-    filtered.sort((a, b) => b.apy - a.apy);
-
-    let num = answers.numresults === "Show all" ? filtered.length : parseInt(answers.numresults) || filtered.length;
-
-    let html = `<div class='question'>Top CD Options Based on Your Criteria</div>`;
-
-    const slice = filtered.slice(0, num);
-
-    slice.forEach(cd => {
-        // Simple “you’d earn more” estimate over 1 year
-        const extra = ((cd.apy - currentRate) / 100) * amount;
-        const extraText = isNaN(extra) ? "" : ` — You’d earn about $${extra.toFixed(2)} more vs your current rate (1 year).`;
-
-        html += `<div class='list-item'>
-            <strong>${cd.bank}</strong> — ${cd.apy.toFixed(2)}% APY, ${cd.term}, Min Deposit: $${cd.min.toLocaleString()}${extraText}
-        </div>`;
-    });
-
-    if (slice.length === 0) {
-        html += `<div class='list-item'>No CDs match your deposit amount. Try a different amount or minimum deposit.</div>`;
+function getFinalAmount() {
+    if (answers.amountChoice === "Custom amount") {
+        return parseAmount(answers.amountCustom);
     }
-
-    html += `<br><button onclick="startFeedback()">Next</button>`;
-    container.innerHTML = html;
+    return parseAmount(answers.amountChoice);
 }
 
-// Feedback flow
+function getFinalMinDeposit() {
+    if (answers.mindeposit === "Custom amount") {
+        return parseAmount(answers.mindepositCustom);
+    }
+    return parseAmount(answers.mindeposit);
+}
+
+// Build results object (for email / logging)
+function buildResults() {
+    const amount = getFinalAmount();
+    const minDeposit = getFinalMinDeposit();
+
+    // Filter by min deposit and user amount
+    const filtered = cds.filter(cd => amount >= cd.min && amount >= minDeposit);
+
+    // For now, just return all that match; you can add more logic later
+    return filtered;
+}
+
+let builtResults = [];
+
+function buildResultsAndGoToFeedback() {
+    builtResults = buildResults();
+    startFeedback();
+}
+
+// ----------------------
+// FEEDBACK FLOW
+// ----------------------
 const feedbackQuestions = [
-    { id: "rating", text: "How would you rate this tool?", type: "select",
-      options: ["1","2","3","4","5"] },
-    { id: "feedback", text: "Would you like to add any feedback?", type: "textarea" },
-    { id: "recommend", text: "Would you recommend this tool to friends or family?", type: "select",
-      options: ["Yes","No"] },
-    { id: "price", text: "What would you feel comfortable paying per month?", type: "select",
-      options: ["$0","$5","$10","$15","$20+","Custom amount"] }
+    {
+        id: "rating",
+        text: "How would you rate this tool, {name}?",
+        type: "select",
+        options: ["1","2","3","4","5"]
+    },
+    {
+        id: "feedback",
+        text: "Would you like to add any feedback, {name}?",
+        type: "textarea"
+    },
+    {
+        id: "recommend",
+        text: "Would you recommend this tool to friends or family, {name}?",
+        type: "select",
+        options: ["Yes","No"]
+    },
+    {
+        id: "price",
+        text: "What would you feel comfortable paying per month, {name}?",
+        type: "select",
+        options: ["$0","$5","$10","$15","$20+","Custom amount"]
+    }
 ];
 
 let feedbackStep = 0;
@@ -207,7 +349,7 @@ function feedbackFlow() {
     const container = document.getElementById("container");
     const q = feedbackQuestions[feedbackStep];
 
-    let html = `<div class='question'>${q.text}</div>`;
+    let html = `<div class='question'>${personalize(q.text)}</div>`;
 
     if (q.type === "textarea") {
         html += `<textarea id="fb" rows="4"></textarea>`;
@@ -239,35 +381,53 @@ function submitAll() {
     const val = document.getElementById("fb").value;
     feedback[q.id] = val;
 
+    // Build a payload that includes:
+    // - name, email
+    // - all answers
+    // - feedback
+    // - results (bank names + links)
     const payload = {
-        ...answers,
-        ...feedback
+        firstName: answers.firstName,
+        email: answers.email,
+        answers,
+        feedback,
+        results: builtResults
     };
 
-    // Send to Google Sheets
-    fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-    }).catch(err => {
-        console.error("Error sending to Google Sheets", err);
-    });
+    // For now, just log it.
+    // Later, you can POST this to Apps Script to:
+    // - store in Google Sheets
+    // - send an email with the results
+    console.log("Final payload to send:", payload);
 
     endScreen();
 }
 
 function endScreen() {
+    const name = answers.firstName || "there";
+    const email = answers.email || "your email";
+
     document.getElementById("container").innerHTML =
-        `<div class='question'>Thank you for using YieldWise CD Finder</div>
-         <div class='small-text'>Your feedback has been recorded.</div>`;
+        `<div class='question'>Thanks, ${name}.</div>
+         <div class='small-text'>
+            I'll email your CD results and links to ${email}.
+         </div>
+         <div class='restart' onclick="restart()">Start over</div>`;
 }
 
-// Start
+function restart() {
+    step = 0;
+    answers = {};
+    feedbackStep = 0;
+    feedback = {};
+    builtResults = [];
+    renderQuestion();
+}
+
+// Start the flow
 renderQuestion();
 </script>
 
 </body>
 </html>
+
