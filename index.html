@@ -1,430 +1,463 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>YieldWise CD Finder</title>
-<style>
+  <meta charset="UTF-8" />
+  <title>YieldWise CD Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
     body {
-        margin: 0;
-        padding: 0;
-        background: linear-gradient(#E8F5F9, #FFFFFF);
-        font-family: Arial, sans-serif;
-        color: #222;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1020;
+      color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
     }
-
-    #title {
-        margin-top: 20px;
-        font-size: 20px;
-        font-weight: bold;
-        color: #222;
-        text-align: center;
+    .container {
+      max-width: 600px;
+      width: 100%;
+      margin: 40px 16px;
+      background: #151a2c;
+      border-radius: 12px;
+      padding: 24px 20px 28px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      border: 1px solid #252b45;
     }
-
-    #container {
-        margin-top: 120px;
-        width: 100%;
-        max-width: 600px;
-        text-align: center;
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+      color: #ffffff;
     }
-
+    .subtitle {
+      color: #c3c7e0;
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+    }
     .question {
-        font-size: 32px;
-        font-weight: bold;
-        margin-bottom: 30px;
+      margin-top: 10px;
+      margin-bottom: 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #f0f2ff;
     }
-
-    input, select, textarea {
-        width: 80%;
-        padding: 12px;
-        font-size: 18px;
-        margin-bottom: 20px;
-        border: 1px solid #CCC;
-        border-radius: 6px;
+    .input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #3a4160;
+      background: #101426;
+      color: #f5f5f5;
+      font-size: 0.95rem;
+      box-sizing: border-box;
     }
-
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
     button {
-        background: #2E8B57;
-        color: white;
-        padding: 14px 28px;
-        font-size: 20px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
     }
-
-    button:hover {
-        background: #256f46;
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
     }
-
-    .small-text {
-        font-size: 14px;
-        margin-top: 10px;
-        color: #555;
+    .btn-secondary {
+      background: #2b314a;
+      color: #e0e3ff;
     }
-
-    .restart {
-        margin-top: 20px;
-        font-size: 16px;
-        text-decoration: underline;
-        cursor: pointer;
-        color: #2E8B57;
+    .btn-primary:hover {
+      background: #4338ca;
     }
-
-    .hidden {
-        display: none;
+    .btn-secondary:hover {
+      background: #363d5c;
     }
-</style>
+    .progress {
+      font-size: 0.8rem;
+      color: #9ca3c7;
+      margin-bottom: 8px;
+    }
+    .results-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.95rem;
+    }
+    .results-list li {
+      margin-bottom: 6px;
+    }
+    a {
+      color: #7dd3fc;
+    }
+    .small-note {
+      font-size: 0.8rem;
+      color: #9ca3c7;
+      margin-top: 6px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>YieldWise CD Finder</h1>
+    <div class="subtitle">
+      Answer a few quick questions and I’ll match you with CD options that fit your amount, timeframe, and priorities.
+    </div>
+    <div id="app"></div>
+  </div>
 
-<div id="title">YieldWise CD Finder</div>
-<div id="container"></div>
+  <script>
+    // ⭐ Backend URL
+    const APPS_SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbzAv3PdLlDru1gnA8_XjUmV9lH1jUubD9M6MIiLUvBzrwXM2Xsaa8-wBzBGtxDz2bf1/exec";
 
-<script>
-// ----------------------
-// REAL BANK DATA (NAMES + LINKS)
-// ----------------------
-const cds = [
-    {
-        bank: "Ally Bank",
-        term: "12 months",
-        min: 0,
-        link: "https://www.ally.com/bank/cd/"
-    },
-    {
-        bank: "Capital One",
-        term: "12 months",
-        min: 0,
-        link: "https://www.capitalone.com/bank/cds/"
-    },
-    {
-        bank: "Discover Bank",
-        term: "12 months",
-        min: 2500,
-        link: "https://www.discover.com/online-banking/cd/"
-    },
-    {
-        bank: "Synchrony Bank",
-        term: "12 months",
-        min: 0,
-        link: "https://www.synchronybank.com/banking/cds/"
-    },
-    {
-        bank: "Marcus by Goldman Sachs",
-        term: "12 months",
-        min: 500,
-        link: "https://www.marcus.com/us/en/savings/high-yield-cds"
-    },
-    {
-        bank: "Citi",
-        term: "12 months",
-        min: 500,
-        link: "https://online.citi.com/US/ag/cdit/cds"
-    },
-    {
-        bank: "Bank of America",
-        term: "12 months",
-        min: 1000,
-        link: "https://www.bankofamerica.com/deposits/cd-certificate-of-deposit/"
-    },
-    {
-        bank: "Chase",
-        term: "12 months",
-        min: 1000,
-        link: "https://www.chase.com/personal/savings/cd"
-    },
-    {
-        bank: "Wells Fargo",
-        term: "12 months",
-        min: 2500,
-        link: "https://www.wellsfargo.com/savings-cds/cds/"
-    }
-    // You can add more banks here as needed
-];
+    // ⭐ State
+    let step = 0;
+    let feedbackStep = 0;
+    const answers = {};
+    const feedback = {};
+    let builtResults = [];
 
-// ----------------------
-// QUESTION FLOW
-// ----------------------
-let step = 0;
-let answers = {};
-
-const questions = [
-    { id: "firstName", text: "What's your first name?", type: "input" },
-    { id: "email", text: "Great, {name}. What's the best email to send your results to?", type: "input" },
-    {
+    // ⭐ Main survey questions
+    const questions = [
+      {
+        id: "firstName",
+        text: "First, what’s your first name?",
+        type: "text",
+        placeholder: "Johnny"
+      },
+      {
+        id: "email",
+        text: "What email should I send your CD matches to?",
+        type: "email",
+        placeholder: "you@example.com"
+      },
+      {
         id: "amountChoice",
-        text: "Alright {name}, how much money do you want to invest?",
+        text: "How much do you want to invest in CDs?",
         type: "select",
-        options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000","Custom amount"]
-    },
-    { id: "amountCustom", text: "Enter your custom amount, {name}.", type: "input-amount", optional: true },
-    {
+        options: ["$500", "$1,000", "$5,000", "$10,000+"]
+      },
+      {
         id: "timeframe",
-        text: "How long can you leave the money untouched, {name}?",
+        text: "How long can you leave the money in a CD?",
         type: "select",
-        options: ["3 months","6 months","12 months","18 months","24 months","36 months","60 months"]
-    },
-    {
+        options: ["3 months", "6 months", "12 months", "18+ months"]
+      },
+      {
         id: "mindeposit",
-        text: "What's the minimum deposit you're comfortable with, {name}?",
+        text: "What’s the minimum deposit you’re comfortable with for a single CD?",
         type: "select",
-        options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000","Custom amount"]
-    },
-    { id: "mindepositCustom", text: "Enter your custom minimum deposit, {name}.", type: "input-amount", optional: true },
-    {
+        options: ["$500", "$1,000", "$5,000", "No preference"]
+      },
+      {
         id: "currentrate",
-        text: "What rate are you getting right now, {name}? (You can estimate.)",
-        type: "input"
-    },
-    {
+        text: "If you know it, what rate are you earning now (roughly)?",
+        type: "select",
+        options: ["I’m not sure", "1%", "2%", "3%", "4%+", "I’m just in cash"]
+      },
+      {
         id: "penalty",
-        text: "How important is a low early‑withdrawal penalty to you, {name}?",
+        text: "How important is a low early withdrawal penalty to you?",
         type: "select",
-        options: ["Very important","Somewhat important","Doesn't matter"]
-    },
-    {
+        options: ["Not important", "Somewhat important", "Very important"]
+      },
+      {
         id: "addon",
-        text: "Do you want the ability to add more money later, {name}?",
+        text: "Would you like to be able to add more money to this CD over time if allowed?",
         type: "select",
-        options: ["Yes","No","Doesn't matter"]
-    },
-    {
+        options: ["Yes", "No", "Not sure"]
+      },
+      {
         id: "numresults",
-        text: "How many CD options would you like me to analyze for you, {name}?",
+        text: "How many CD options would you like me to show you?",
         type: "select",
-        options: ["1","3","5","10","Show all"]
+        options: ["3", "5", "10"]
+      },
+      {
+        id: "price",
+        text: "What would you feel comfortable paying each month for personalized investment updates and opportunities, {name}?",
+        type: "select",
+        options: [
+          "$0 — I just want the free version",
+          "$5 — A small monthly fee is fine",
+          "$10 — Worth it if it saves me time",
+          "$15 — Worth it if it boosts my returns",
+          "$20+ — I’d pay more for premium alerts",
+          "Custom amount"
+        ]
+      }
+    ];
+
+    // ⭐ Simple feedback questions after results
+    const feedbackQuestions = [
+      {
+        id: "rating",
+        text: "On a scale of 1–5, how helpful were these CD matches?",
+        type: "select",
+        options: ["1", "2", "3", "4", "5"]
+      },
+      {
+        id: "feedback",
+        text: "Anything you wish this tool did better or differently?",
+        type: "textarea"
+      },
+      {
+        id: "recommend",
+        text: "Would you recommend this tool to a friend who’s comparing CDs?",
+        type: "select",
+        options: ["Yes", "No", "Not sure"]
+      },
+      {
+        id: "priceConfirm",
+        text: "Does the monthly amount you chose for updates still feel right?",
+        type: "select",
+        options: ["Yes", "I’d pay less", "I’d pay more", "Not sure"]
+      }
+    ];
+
+    const app = document.getElementById("app");
+
+    function renderQuestion() {
+      const q = questions[step];
+      const total = questions.length;
+      const name = answers.firstName || "you";
+      const text = q.text.replace("{name}", name);
+
+      let inputHtml = "";
+      if (q.type === "text" || q.type === "email") {
+        inputHtml = `<input id="answer" class="input" type="${q.type}" placeholder="${q.placeholder || ""}" />`;
+      } else if (q.type === "select") {
+        inputHtml = `<select id="answer" class="input">
+          <option value="">Select an option</option>
+          ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
+        </select>`;
+      }
+
+      app.innerHTML = `
+        <div class="progress">Step ${step + 1} of ${total}</div>
+        <div class="question">${text}</div>
+        ${inputHtml}
+        <div class="btn-row">
+          ${step > 0 ? `<button class="btn-secondary" onclick="prev()">Back</button>` : ""}
+          <button class="btn-primary" onclick="next()">Next</button>
+        </div>
+      `;
     }
-];
 
-function personalize(text) {
-    const name = answers.firstName || "";
-    return text.replace(/{name}/g, name);
-}
+    function next() {
+      const q = questions[step];
+      const el = document.getElementById("answer");
+      if (!el) return;
 
-function renderQuestion() {
-    const container = document.getElementById("container");
-    const q = questions[step];
+      const val = el.value.trim();
+      if (!val) {
+        el.focus();
+        return;
+      }
 
-    // Skip optional custom questions if not needed
-    if (q.optional && !shouldAskOptional(q.id)) {
+      answers[q.id] = val;
+
+      if (step < questions.length - 1) {
         step++;
         renderQuestion();
-        return;
+      } else {
+        buildResults();
+      }
     }
 
-    let html = `<div class='question'>${personalize(q.text)}</div>`;
-
-    if (q.type === "input") {
-        html += `<input id="answer" type="text">`;
-    } else if (q.type === "select") {
-        html += `<select id="answer">`;
-        q.options.forEach(o => html += `<option value="${o}">${o}</option>`);
-        html += `</select>`;
-    } else if (q.type === "input-amount") {
-        html += `<input id="answer" type="number" min="0" step="1" placeholder="$0">`;
-    }
-
-    html += `<br><button onclick="nextStep()">Next</button>`;
-    container.innerHTML = html;
-
-    // If this is the amountChoice or mindeposit question, watch for "Custom amount"
-    if (q.id === "amountChoice" || q.id === "mindeposit") {
-        const selectEl = document.getElementById("answer");
-        selectEl.addEventListener("change", () => {
-            if (selectEl.value === "Custom amount") {
-                // We don't show the custom input here; we handle it as the next question
-            }
-        });
-    }
-}
-
-function shouldAskOptional(id) {
-    if (id === "amountCustom") {
-        return answers.amountChoice === "Custom amount";
-    }
-    if (id === "mindepositCustom") {
-        return answers.mindeposit === "Custom amount";
-    }
-    return true;
-}
-
-function nextStep() {
-    const q = questions[step];
-    const el = document.getElementById("answer");
-    if (!el) return;
-    const val = el.value;
-
-    answers[q.id] = val;
-
-    step++;
-
-    if (step < questions.length) {
+    function prev() {
+      if (step > 0) {
+        step--;
         renderQuestion();
-    } else {
-        buildResultsAndGoToFeedback();
-    }
-}
-
-function parseAmount(str) {
-    if (!str) return 0;
-    return parseFloat(String(str).replace(/[^0-9.]/g, "")) || 0;
-}
-
-function getFinalAmount() {
-    if (answers.amountChoice === "Custom amount") {
-        return parseAmount(answers.amountCustom);
-    }
-    return parseAmount(answers.amountChoice);
-}
-
-function getFinalMinDeposit() {
-    if (answers.mindeposit === "Custom amount") {
-        return parseAmount(answers.mindepositCustom);
-    }
-    return parseAmount(answers.mindeposit);
-}
-
-// Build results object (for email / logging)
-function buildResults() {
-    const amount = getFinalAmount();
-    const minDeposit = getFinalMinDeposit();
-
-    // Filter by min deposit and user amount
-    const filtered = cds.filter(cd => amount >= cd.min && amount >= minDeposit);
-
-    // For now, just return all that match; you can add more logic later
-    return filtered;
-}
-
-let builtResults = [];
-
-function buildResultsAndGoToFeedback() {
-    builtResults = buildResults();
-    startFeedback();
-}
-
-// ----------------------
-// FEEDBACK FLOW
-// ----------------------
-const feedbackQuestions = [
-    {
-        id: "rating",
-        text: "How would you rate this tool, {name}?",
-        type: "select",
-        options: ["1","2","3","4","5"]
-    },
-    {
-        id: "feedback",
-        text: "Would you like to add any feedback, {name}?",
-        type: "textarea"
-    },
-    {
-        id: "recommend",
-        text: "Would you recommend this tool to friends or family, {name}?",
-        type: "select",
-        options: ["Yes","No"]
-    },
-    {
-       {
-   {
-    id: "price",
-    text: "What would you feel comfortable paying each month for personalized investment updates and opportunities, {name}?",
-    type: "select",
-    options: [
-        "$0 — I just want the free version",
-        "$5 — A small monthly fee is fine",
-        "$10 — Worth it if it saves me time",
-        "$15 — Worth it if it boosts my returns",
-        "$20+ — I’d pay more for premium alerts",
-        "Custom amount"
-    ]
-},
-
-
-
-let feedbackStep = 0;
-let feedback = {};
-
-function startFeedback() {
-    feedbackStep = 0;
-    feedback = {};
-    feedbackFlow();
-}
-
-function feedbackFlow() {
-    const container = document.getElementById("container");
-    const q = feedbackQuestions[feedbackStep];
-
-    let html = `<div class='question'>${personalize(q.text)}</div>`;
-
-    if (q.type === "textarea") {
-        html += `<textarea id="fb" rows="4"></textarea>`;
-    } else {
-        html += `<select id="fb">`;
-        q.options.forEach(o => html += `<option value="${o}">${o}</option>`);
-        html += `</select>`;
+      }
     }
 
-    const isLast = feedbackStep === feedbackQuestions.length - 1;
-    html += `<br><button onclick="${isLast ? 'submitAll()' : 'nextFeedback()'}">${isLast ? 'Submit' : 'Next'}</button>`;
-    container.innerHTML = html;
-}
+    // ⭐ Build simple CD results based on answers
+    function buildResults() {
+      const amount = answers.amountChoice || "$500";
+      const timeframe = answers.timeframe || "12 months";
+      const minDeposit = answers.mindeposit || "$500";
 
-function nextFeedback() {
-    const q = feedbackQuestions[feedbackStep];
-    const val = document.getElementById("fb").value;
-    feedback[q.id] = val;
+      const baseResults = [
+        {
+          bank: "Ally Bank",
+          term: "12 months",
+          min: 0,
+          link: "https://www.ally.com/bank/cd/"
+        },
+        {
+          bank: "Capital One",
+          term: "12 months",
+          min: 0,
+          link: "https://www.capitalone.com/bank/cds/"
+        },
+        {
+          bank: "Synchrony Bank",
+          term: "12 months",
+          min: 0,
+          link: "https://www.synchronybank.com/banking/cds/"
+        },
+        {
+          bank: "Marcus by Goldman Sachs",
+          term: "12 months",
+          min: 500,
+          link: "https://www.marcus.com/us/en/savings/high-yield-cds"
+        },
+        {
+          bank: "Citi",
+          term: "12 months",
+          min: 500,
+          link: "https://online.citi.com/US/ag/cdit/cds"
+        }
+      ];
 
-    feedbackStep++;
+      const desiredCount = parseInt(answers.numresults || "5", 10);
+      builtResults = baseResults.slice(0, desiredCount);
 
-    if (feedbackStep < feedbackQuestions.length) {
-        feedbackFlow();
+      const name = answers.firstName || "you";
+
+      app.innerHTML = `
+        <div class="question">Here are some CD options that could fit what you told me, ${name}:</div>
+        <ul class="results-list">
+          ${builtResults
+            .map(
+              r =>
+                `<li><strong>${r.bank}</strong> — ${r.term}, min deposit $${r.min} — <a href="${r.link}" target="_blank">View details</a></li>`
+            )
+            .join("")}
+        </ul>
+        <div class="small-note">
+          These are example matches based on your amount, timeframe, and minimum deposit comfort level.
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="startFeedback()">Continue</button>
+        </div>
+      `;
     }
-}
 
-function submitAll() {
-    const q = feedbackQuestions[feedbackStep];
-    const val = document.getElementById("fb").value;
-    feedback[q.id] = val;
+    function startFeedback() {
+      feedbackStep = 0;
+      renderFeedback();
+    }
 
-    const payload = {
+    function renderFeedback() {
+      const q = feedbackQuestions[feedbackStep];
+      const total = feedbackQuestions.length;
+
+      let inputHtml = "";
+      if (q.type === "textarea") {
+        inputHtml = `<textarea id="fb" class="input" placeholder="Type your thoughts here..."></textarea>`;
+      } else if (q.type === "select") {
+        inputHtml = `<select id="fb" class="input">
+          <option value="">Select an option</option>
+          ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
+        </select>`;
+      }
+
+      app.innerHTML = `
+        <div class="progress">Feedback ${feedbackStep + 1} of ${total}</div>
+        <div class="question">${q.text}</div>
+        ${inputHtml}
+        <div class="btn-row">
+          ${feedbackStep > 0 ? `<button class="btn-secondary" onclick="prevFeedback()">Back</button>` : ""}
+          <button class="btn-primary" onclick="nextFeedback()">Next</button>
+        </div>
+      `;
+    }
+
+    function nextFeedback() {
+      const q = feedbackQuestions[feedbackStep];
+      const el = document.getElementById("fb");
+      if (!el) return;
+
+      const val = el.value.trim();
+      if (!val && q.type !== "textarea") {
+        el.focus();
+        return;
+      }
+
+      feedback[q.id] = val;
+
+      if (feedbackStep < feedbackQuestions.length - 1) {
+        feedbackStep++;
+        renderFeedback();
+      } else {
+        submitAll();
+      }
+    }
+
+    function prevFeedback() {
+      if (feedbackStep > 0) {
+        feedbackStep--;
+        renderFeedback();
+      }
+    }
+
+    // ⭐ Final submit: send to Apps Script
+    function submitAll() {
+      const q = feedbackQuestions[feedbackStep];
+      const el = document.getElementById("fb");
+      if (el && q) {
+        const val = el.value.trim();
+        if (val || q.type === "textarea") {
+          feedback[q.id] = val;
+        }
+      }
+
+      const payload = {
         firstName: answers.firstName,
         email: answers.email,
         answers,
         feedback,
         results: builtResults
-    };
+      };
 
-    console.log("Final payload to send:", payload);
+      console.log("Final payload to send:", payload);
 
-    // ⭐ SEND TO GOOGLE APPS SCRIPT ⭐
-    fetch(APPS_SCRIPT_URL, {
+      fetch(APPS_SCRIPT_URL, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
-    }).catch(err => console.error("Error sending to Apps Script:", err));
+      })
+        .then(r => r.text())
+        .then(t => console.log("Apps Script response:", t))
+        .catch(err => console.error("Error sending to Apps Script:", err));
 
-    // Show the thank‑you screen AFTER sending
-    endScreen();
-}
+      endScreen();
+    }
 
-function endScreen() {
-    const name = answers.firstName || "there";
-    const email = answers.email || "your email";
+    function endScreen() {
+      const name = answers.firstName || "you";
+      app.innerHTML = `
+        <div class="question">Thanks, ${name}.</div>
+        <div class="subtitle">
+          I’ve logged your answers and CD matches. If you entered your email, you’ll receive your results there as well.
+        </div>
+      `;
+    }
 
-    document.getElementById("container").innerHTML =
-        `<div class='question'>Thanks, ${name}.</div>
-         <div class='small-text'>
-            I'll email your CD results and links to ${email}.
-         </div>
-         <div class='restart' onclick="restart()">Start over</div>`;
-}
+    // ⭐ Start
+    renderQuestion();
+  </script>
+</body>
+</html>
+
 
 function restart() {
     step = 0;
