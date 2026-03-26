@@ -1,223 +1,347 @@
-<script>
-const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbzAv3PdLlDru1gnA8_XjUmV9lH1jUubD9M6MIiLUvBzrwXM2Xsaa8-wBzBGtxDz2bf1/exec";
-
-let step = 0;
-let feedbackStep = 0;
-const answers = {};
-const feedback = {};
-let builtResults = [];
-
-const questions = [
-  { id: "firstName", text: "First, what’s your first name?", type: "text", placeholder: "Johnny" },
-  { id: "email", text: "What email should I send your CD matches to?", type: "email", placeholder: "you@example.com" },
-  { id: "amountChoice", text: "How much do you want to invest in CDs?", type: "select", options: ["$500", "$1,000", "$5,000", "$10,000+"] },
-  { id: "timeframe", text: "How long can you leave the money in a CD?", type: "select", options: ["3 months", "6 months", "12 months", "18+ months"] },
-  { id: "mindeposit", text: "What’s the minimum deposit you're comfortable with?", type: "select", options: ["$500", "$1,000", "$5,000", "No preference"] },
-  { id: "currentrate", text: "What rate are you earning now (roughly)?", type: "select", options: ["I’m not sure", "1%", "2%", "3%", "4%+", "I’m just in cash"] },
-  { id: "penalty", text: "How important is a low early withdrawal penalty?", type: "select", options: ["Not important", "Somewhat important", "Very important"] },
-  { id: "addon", text: "Would you like to add more money over time if allowed?", type: "select", options: ["Yes", "No", "Not sure"] },
-  { id: "numresults", text: "How many CD options would you like?", type: "select", options: ["3", "5", "10"] },
-
-  {
-    id: "price",
-    text: "What would you feel comfortable paying each month for personalized investment updates and opportunities, {name}?",
-    type: "select",
-    options: [
-      "$0 — I just want the free version",
-      "$5 — A small monthly fee is fine",
-      "$10 — Worth it if it saves me time",
-      "$15 — Worth it if it boosts my returns",
-      "$20+ — I’d pay more for premium alerts",
-      "Custom amount"
-    ]
-  }
-];
-
-const feedbackQuestions = [
-  { id: "rating", text: "How helpful were these CD matches?", type: "select", options: ["1", "2", "3", "4", "5"] },
-  { id: "feedback", text: "Anything you wish this tool did better?", type: "textarea" },
-  { id: "recommend", text: "Would you recommend this tool to a friend?", type: "select", options: ["Yes", "No", "Not sure"] },
-  { id: "priceConfirm", text: "Does the monthly amount you chose still feel right?", type: "select", options: ["Yes", "I’d pay less", "I’d pay more", "Not sure"] }
-];
-
-const app = document.getElementById("app");
-
-function renderQuestion() {
-  const q = questions[step];
-  const total = questions.length;
-  const name = answers.firstName || "you";
-  const text = q.text.replace("{name}", name);
-
-  let inputHtml = "";
-  if (q.type === "text" || q.type === "email") {
-    inputHtml = `<input id="answer" class="input" type="${q.type}" placeholder="${q.placeholder || ""}" />`;
-  } else if (q.type === "select") {
-    inputHtml = `<select id="answer" class="input">
-      <option value="">Select an option</option>
-      ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
-    </select>`;
-  }
-
-  app.innerHTML = `
-    <div class="progress">Step ${step + 1} of ${total}</div>
-    <div class="question">${text}</div>
-    ${inputHtml}
-    <div class="btn-row">
-      ${step > 0 ? `<button class="btn-secondary" onclick="prev()">Back</button>` : ""}
-      <button class="btn-primary" onclick="next()">Next</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>YieldWise CD Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0b1020;
+      color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      margin: 40px 16px;
+      background: #151a2c;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      border: 1px solid #252b45;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+      color: #ffffff;
+    }
+    .subtitle {
+      color: #c3c7e0;
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+    }
+    .question {
+      margin-top: 10px;
+      margin-bottom: 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #f0f2ff;
+    }
+    .input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #3a4160;
+      background: #101426;
+      color: #f5f5f5;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-secondary {
+      background: #2b314a;
+      color: #e0e3ff;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+    .btn-secondary:hover {
+      background: #363d5c;
+    }
+    .progress {
+      font-size: 0.8rem;
+      color: #9ca3c7;
+      margin-bottom: 8px;
+    }
+    .results-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.95rem;
+    }
+    .results-list li {
+      margin-bottom: 6px;
+    }
+    a {
+      color: #7dd3fc;
+    }
+    .small-note {
+      font-size: 0.8rem;
+      color: #9ca3c7;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YieldWise CD Finder</h1>
+    <div class="subtitle">
+      Answer a few quick questions and I’ll match you with CD options that fit your amount, timeframe, and priorities.
     </div>
-  `;
-}
+    <div id="app"></div>
+  </div>
 
-function next() {
-  const q = questions[step];
-  const el = document.getElementById("answer");
-  if (!el) return;
+  <script>
+    const APPS_SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbzAv3PdLlDru1gnA8_XjUmV9lH1jUubD9M6MIiLUvBzrwXM2Xsaa8-wBzBGtxDz2bf1/exec";
 
-  const val = el.value.trim();
-  if (!val) {
-    el.focus();
-    return;
-  }
+    let step = 0;
+    let feedbackStep = 0;
+    const answers = {};
+    const feedback = {};
+    let builtResults = [];
 
-  answers[q.id] = val;
+    const questions = [
+      { id: "firstName", text: "First, what’s your first name?", type: "text", placeholder: "Johnny" },
+      { id: "email", text: "What email should I send your CD matches to?", type: "email", placeholder: "you@example.com" },
+      { id: "amountChoice", text: "How much do you want to invest in CDs?", type: "select", options: ["$500", "$1,000", "$5,000", "$10,000+"] },
+      { id: "timeframe", text: "How long can you leave the money in a CD?", type: "select", options: ["3 months", "6 months", "12 months", "18+ months"] },
+      { id: "mindeposit", text: "What’s the minimum deposit you're comfortable with?", type: "select", options: ["$500", "$1,000", "$5,000", "No preference"] },
+      { id: "currentrate", text: "What rate are you earning now (roughly)?", type: "select", options: ["I’m not sure", "1%", "2%", "3%", "4%+", "I’m just in cash"] },
+      { id: "penalty", text: "How important is a low early withdrawal penalty?", type: "select", options: ["Not important", "Somewhat important", "Very important"] },
+      { id: "addon", text: "Would you like to add more money over time if allowed?", type: "select", options: ["Yes", "No", "Not sure"] },
+      { id: "numresults", text: "How many CD options would you like?", type: "select", options: ["3", "5", "10"] },
 
-  if (step < questions.length - 1) {
-    step++;
+      {
+        id: "price",
+        text: "What would you feel comfortable paying each month for personalized investment updates and opportunities, {name}?",
+        type: "select",
+        options: [
+          "$0 — I just want the free version",
+          "$5 — A small monthly fee is fine",
+          "$10 — Worth it if it saves me time",
+          "$15 — Worth it if it boosts my returns",
+          "$20+ — I’d pay more for premium alerts",
+          "Custom amount"
+        ]
+      }
+    ];
+
+    const feedbackQuestions = [
+      { id: "rating", text: "How helpful were these CD matches?", type: "select", options: ["1", "2", "3", "4", "5"] },
+      { id: "feedback", text: "Anything you wish this tool did better?", type: "textarea" },
+      { id: "recommend", text: "Would you recommend this tool to a friend?", type: "select", options: ["Yes", "No", "Not sure"] },
+      { id: "priceConfirm", text: "Does the monthly amount you chose still feel right?", type: "select", options: ["Yes", "I’d pay less", "I’d pay more", "Not sure"] }
+    ];
+
+    const app = document.getElementById("app");
+
+    function renderQuestion() {
+      const q = questions[step];
+      const total = questions.length;
+      const name = answers.firstName || "you";
+      const text = q.text.replace("{name}", name);
+
+      let inputHtml = "";
+      if (q.type === "text" || q.type === "email") {
+        inputHtml = `<input id="answer" class="input" type="${q.type}" placeholder="${q.placeholder || ""}" />`;
+      } else if (q.type === "select") {
+        inputHtml = `<select id="answer" class="input">
+          <option value="">Select an option</option>
+          ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
+        </select>`;
+      }
+
+      app.innerHTML = `
+        <div class="progress">Step ${step + 1} of ${total}</div>
+        <div class="question">${text}</div>
+        ${inputHtml}
+        <div class="btn-row">
+          ${step > 0 ? `<button class="btn-secondary" onclick="prev()">Back</button>` : ""}
+          <button class="btn-primary" onclick="next()">Next</button>
+        </div>
+      `;
+    }
+
+    function next() {
+      const q = questions[step];
+      const el = document.getElementById("answer");
+      if (!el) return;
+
+      const val = el.value.trim();
+      if (!val) {
+        el.focus();
+        return;
+      }
+
+      answers[q.id] = val;
+
+      if (step < questions.length - 1) {
+        step++;
+        renderQuestion();
+      } else {
+        buildResults();
+      }
+    }
+
+    function prev() {
+      if (step > 0) {
+        step--;
+        renderQuestion();
+      }
+    }
+
+    function buildResults() {
+      const baseResults = [
+        { bank: "Ally Bank", term: "12 months", min: 0, link: "https://www.ally.com/bank/cd/" },
+        { bank: "Capital One", term: "12 months", min: 0, link: "https://www.capitalone.com/bank/cds/" },
+        { bank: "Synchrony Bank", term: "12 months", min: 0, link: "https://www.synchronybank.com/banking/cds/" },
+        { bank: "Marcus by Goldman Sachs", term: "12 months", min: 500, link: "https://www.marcus.com/us/en/savings/high-yield-cds" },
+        { bank: "Citi", term: "12 months", min: 500, link: "https://online.citi.com/US/ag/cdit/cds" }
+      ];
+
+      const desiredCount = parseInt(answers.numresults || "5", 10);
+      builtResults = baseResults.slice(0, desiredCount);
+
+      const name = answers.firstName || "you";
+
+      app.innerHTML = `
+        <div class="question">Here are some CD options that could fit what you told me, ${name}:</div>
+        <ul class="results-list">
+          ${builtResults
+            .map(
+              r =>
+                `<li><strong>${r.bank}</strong> — ${r.term}, min deposit $${r.min} — <a href="${r.link}" target="_blank">View details</a></li>`
+            )
+            .join("")}
+        </ul>
+        <div class="small-note">These are example matches based on your amount, timeframe, and minimum deposit comfort level.</div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="startFeedback()">Continue</button>
+        </div>
+      `;
+    }
+
+    function startFeedback() {
+      feedbackStep = 0;
+      renderFeedback();
+    }
+
+    function renderFeedback() {
+      const q = feedbackQuestions[feedbackStep];
+      const total = feedbackQuestions.length;
+
+      let inputHtml = "";
+      if (q.type === "textarea") {
+        inputHtml = `<textarea id="fb" class="input"></textarea>`;
+      } else if (q.type === "select") {
+        inputHtml = `<select id="fb" class="input">
+          <option value="">Select an option</option>
+          ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
+        </select>`;
+      }
+
+      app.innerHTML = `
+        <div class="progress">Feedback ${feedbackStep + 1} of ${total}</div>
+        <div class="question">${q.text}</div>
+        ${inputHtml}
+        <div class="btn-row">
+          ${feedbackStep > 0 ? `<button class="btn-secondary" onclick="prevFeedback()">Back</button>` : ""}
+          <button class="btn-primary" onclick="nextFeedback()">Next</button>
+        </div>
+      `;
+    }
+
+    function nextFeedback() {
+      const q = feedbackQuestions[feedbackStep];
+      const el = document.getElementById("fb");
+      if (!el) return;
+
+      const val = el.value.trim();
+      if (!val && q.type !== "textarea") {
+        el.focus();
+        return;
+      }
+
+      feedback[q.id] = val;
+
+      if (feedbackStep < feedbackQuestions.length - 1) {
+        feedbackStep++;
+        renderFeedback();
+      } else {
+        submitAll();
+      }
+    }
+
+    function prevFeedback() {
+      if (feedbackStep > 0) {
+        feedbackStep--;
+        renderFeedback();
+      }
+    }
+
+    function submitAll() {
+      const payload = {
+        firstName: answers.firstName,
+        email: answers.email,
+        answers,
+        feedback,
+        results: builtResults
+      };
+
+      console.log("Final payload to send:", payload);
+
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.text())
+        .then(t => console.log("Apps Script response:", t))
+        .catch(err => console.error("Error sending to Apps Script:", err));
+
+      endScreen();
+    }
+
+    function endScreen() {
+      const name = answers.firstName || "you";
+      app.innerHTML = `
+        <div class="question">Thanks, ${name}.</div>
+        <div class="subtitle">Your results have been logged and emailed if you provided an address.</div>
+      `;
+    }
+
     renderQuestion();
-  } else {
-    buildResults();
-  }
-}
-
-function prev() {
-  if (step > 0) {
-    step--;
-    renderQuestion();
-  }
-}
-
-function buildResults() {
-  const baseResults = [
-    { bank: "Ally Bank", term: "12 months", min: 0, link: "https://www.ally.com/bank/cd/" },
-    { bank: "Capital One", term: "12 months", min: 0, link: "https://www.capitalone.com/bank/cds/" },
-    { bank: "Synchrony Bank", term: "12 months", min: 0, link: "https://www.synchronybank.com/banking/cds/" },
-    { bank: "Marcus by Goldman Sachs", term: "12 months", min: 500, link: "https://www.marcus.com/us/en/savings/high-yield-cds" },
-    { bank: "Citi", term: "12 months", min: 500, link: "https://online.citi.com/US/ag/cdit/cds" }
-  ];
-
-  const desiredCount = parseInt(answers.numresults || "5", 10);
-  builtResults = baseResults.slice(0, desiredCount);
-
-  const name = answers.firstName || "you";
-
-  app.innerHTML = `
-    <div class="question">Here are some CD options that could fit what you told me, ${name}:</div>
-    <ul class="results-list">
-      ${builtResults
-        .map(
-          r =>
-            `<li><strong>${r.bank}</strong> — ${r.term}, min deposit $${r.min} — <a href="${r.link}" target="_blank">View details</a></li>`
-        )
-        .join("")}
-    </ul>
-    <div class="btn-row">
-      <button class="btn-primary" onclick="startFeedback()">Continue</button>
-    </div>
-  `;
-}
-
-function startFeedback() {
-  feedbackStep = 0;
-  renderFeedback();
-}
-
-function renderFeedback() {
-  const q = feedbackQuestions[feedbackStep];
-  const total = feedbackQuestions.length;
-
-  let inputHtml = "";
-  if (q.type === "textarea") {
-    inputHtml = `<textarea id="fb" class="input"></textarea>`;
-  } else if (q.type === "select") {
-    inputHtml = `<select id="fb" class="input">
-      <option value="">Select an option</option>
-      ${q.options.map(o => `<option value="${o}">${o}</option>`).join("")}
-    </select>`;
-  }
-
-  app.innerHTML = `
-    <div class="progress">Feedback ${feedbackStep + 1} of ${total}</div>
-    <div class="question">${q.text}</div>
-    ${inputHtml}
-    <div class="btn-row">
-      ${feedbackStep > 0 ? `<button class="btn-secondary" onclick="prevFeedback()">Back</button>` : ""}
-      <button class="btn-primary" onclick="nextFeedback()">Next</button>
-    </div>
-  `;
-}
-
-function nextFeedback() {
-  const q = feedbackQuestions[feedbackStep];
-  const el = document.getElementById("fb");
-  if (!el) return;
-
-  const val = el.value.trim();
-  if (!val && q.type !== "textarea") {
-    el.focus();
-    return;
-  }
-
-  feedback[q.id] = val;
-
-  if (feedbackStep < feedbackQuestions.length - 1) {
-    feedbackStep++;
-    renderFeedback();
-  } else {
-    submitAll();
-  }
-}
-
-function prevFeedback() {
-  if (feedbackStep > 0) {
-    feedbackStep--;
-    renderFeedback();
-  }
-}
-
-function submitAll() {
-  const payload = {
-    firstName: answers.firstName,
-    email: answers.email,
-    answers,
-    feedback,
-    results: builtResults
-  };
-
-  console.log("Final payload to send:", payload);
-
-  fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  })
-    .then(r => r.text())
-    .then(t => console.log("Apps Script response:", t))
-    .catch(err => console.error("Error sending to Apps Script:", err));
-
-  endScreen();
-}
-
-function endScreen() {
-  const name = answers.firstName || "you";
-  app.innerHTML = `
-    <div class="question">Thanks, ${name}.</div>
-    <div class="subtitle">Your results have been logged and emailed if you provided an address.</div>
-  `;
-}
-
-renderQuestion();
-</script>
+  </script>
+</body>
+</html>
 
 
