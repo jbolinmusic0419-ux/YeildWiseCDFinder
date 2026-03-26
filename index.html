@@ -329,12 +329,20 @@ const feedbackQuestions = [
         options: ["Yes","No"]
     },
     {
-        id: "price",
-        text: "What would you feel comfortable paying per month, {name}?",
-        type: "select",
-        options: ["$0","$5","$10","$15","$20+","Custom amount"]
-    }
-];
+       {
+    id: "price",
+    text: "What would you feel comfortable paying each month for personalized investment updates and opportunities, {name}?",
+    type: "select",
+    options: [
+        "$0 — I just want the free version",
+        "$5 — A small monthly fee is fine",
+        "$10 — Worth it if it saves me time",
+        "$15 — Worth it if it boosts my returns",
+        "$20+ — I’d pay more for premium alerts",
+        "Custom amount"
+    ]
+}
+
 
 let feedbackStep = 0;
 let feedback = {};
