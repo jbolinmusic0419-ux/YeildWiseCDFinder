@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YieldWise CD Finder</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #FFFFFF;
+        font-family: Arial, sans-serif;
+        color: #222;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #title {
+        margin-top: 20px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #222;
+        text-align: center;
+    }
+
+    #container {
+        margin-top: 120px;
+        width: 100%;
+        max-width: 600px;
+        text-align: center;
+    }
+
+    .question {
+        font-size: 32px;
+        font-weight: bold;
+        margin-bottom: 30px;
+    }
+
+    input, select, textarea {
+        width: 80%;
+        padding: 12px;
+        font-size: 18px;
+        margin-bottom: 20px;
+        border: 1px solid #CCC;
+        border-radius: 6px;
+    }
+
+    button {
+        background: #2E8B57;
+        color: white;
+        padding: 14px 28px;
+        font-size: 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #256f46;
+    }
+
+    .list-item {
+        text-align: left;
+        margin: 10px 0;
+        font-size: 18px;
+        line-height: 1.4;
+    }
+
+    .small-text {
+        font-size: 14px;
+        margin-top: 10px;
+        color: #555;
+    }
+</style>
+</head>
+<body>
+
+<div id="title">YieldWise CD Finder</div>
+<div id="container"></div>
+
+<script>
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+
+let step = 0;
+let answers = {};
+
+const questions = [
+    { id: "amount", text: "How much money do you want to invest?", type: "input" },
+    { id: "timeframe", text: "How long can you leave the money untouched?", type: "select",
+      options: ["3 months","6 months","12 months","18 months","24 months","36 months","60 months"] },
+    { id: "mindeposit", text: "What’s the minimum deposit you're comfortable with?", type: "select",
+      options: ["$500","$1,000","$5,000","$10,000","$25,000","$50,000"] },
+    { id: "currentrate", text: "What rate are you getting right now?", type: "input" },
+    { id: "penalty", text: "How important is a low early‑withdrawal penalty?", type: "select",
+      options: ["Very important","Somewhat important","Doesn't matter"] },
+    { id: "addon", text: "Do you want the ability to add more money later?", type: "select",
+      options: ["Yes","No","Doesn't matter"] },
+    { id: "numresults", text: "How many CD options would you like me to analyze for you?", type: "select",
+      options: ["1","3","5","10","Show all"] }
+];
+
+// Placeholder CD data — replace with real market data later
+const cds = [
+    { bank: "Bank A", apy: 5.10, term: "12 months", min: 1000 },
+    { bank: "Bank B", apy: 4.85, term: "6 months", min: 500 },
+    { bank: "Bank C", apy: 5.25, term: "18 months", min: 5000 },
+    { bank: "Bank D", apy: 4.95, term: "24 months", min: 1000 },
+    { bank: "Bank E", apy: 5.35, term: "12 months", min: 10000 }
+];
+
+function renderQuestion() {
+    const container = document.getElementById("container");
+    const q = questions[step];
+
+    let html = `<div class='question'>${q.text}</div>`;
+
+    if (q.type === "input") {
+        html += `<input id="answer" type="text">`;
+    } else if (q.type === "select") {
+        html += `<select id="answer">`;
+        q.options.forEach(o => html += `<option value="${o}">${o}</option>`);
+        html += `</select>`;
+    }
+
+    html += `<br><button onclick="nextStep()">Next</button>`;
+    container.innerHTML = html;
+}
+
+function nextStep() {
+    const q = questions[step];
+    const el = document.getElementById("answer");
+    if (!el) return;
+    const val = el.value;
+    answers[q.id] = val;
+
+    step++;
+
+    if (step < questions.length) {
+        renderQuestion();
+    } else {
+        showResults();
+    }
+}
+
+function parseAmount(str) {
+    if (!str) return 0;
+    return parseFloat(String(str).replace(/[^0-9.]/g, "")) || 0;
+}
+
+function showResults() {
+    const container = document.getElementById("container");
+
+    const amount = parseAmount(answers.amount);
+    const currentRate = parseFloat(String(answers.currentrate).replace(/[^0-9.]/g, "")) || 0;
+
+    // Simple filter by min deposit
+    const filtered = cds.filter(cd => amount >= cd.min);
+
+    // Sort by APY descending
+    filtered.sort((a, b) => b.apy - a.apy);
+
+    let num = answers.numresults === "Show all" ? filtered.length : parseInt(answers.numresults) || filtered.length;
+
+    let html = `<div class='question'>Top CD Options Based on Your Criteria</div>`;
+
+    const slice = filtered.slice(0, num);
+
+    slice.forEach(cd => {
+        // Simple “you’d earn more” estimate over 1 year
+        const extra = ((cd.apy - currentRate) / 100) * amount;
+        const extraText = isNaN(extra) ? "" : ` — You’d earn about $${extra.toFixed(2)} more vs your current rate (1 year).`;
+
+        html += `<div class='list-item'>
+            <strong>${cd.bank}</strong> — ${cd.apy.toFixed(2)}% APY, ${cd.term}, Min Deposit: $${cd.min.toLocaleString()}${extraText}
+        </div>`;
+    });
+
+    if (slice.length === 0) {
+        html += `<div class='list-item'>No CDs match your deposit amount. Try a different amount or minimum deposit.</div>`;
+    }
+
+    html += `<br><button onclick="startFeedback()">Next</button>`;
+    container.innerHTML = html;
+}
+
+// Feedback flow
+const feedbackQuestions = [
+    { id: "rating", text: "How would you rate this tool?", type: "select",
+      options: ["1","2","3","4","5"] },
+    { id: "feedback", text: "Would you like to add any feedback?", type: "textarea" },
+    { id: "recommend", text: "Would you recommend this tool to friends or family?", type: "select",
+      options: ["Yes","No"] },
+    { id: "price", text: "What would you feel comfortable paying per month?", type: "select",
+      options: ["$0","$5","$10","$15","$20+","Custom amount"] }
+];
+
+let feedbackStep = 0;
+let feedback = {};
+
+function startFeedback() {
+    feedbackStep = 0;
+    feedback = {};
+    feedbackFlow();
+}
+
+function feedbackFlow() {
+    const container = document.getElementById("container");
+    const q = feedbackQuestions[feedbackStep];
+
+    let html = `<div class='question'>${q.text}</div>`;
+
+    if (q.type === "textarea") {
+        html += `<textarea id="fb" rows="4"></textarea>`;
+    } else {
+        html += `<select id="fb">`;
+        q.options.forEach(o => html += `<option value="${o}">${o}</option>`);
+        html += `</select>`;
+    }
+
+    const isLast = feedbackStep === feedbackQuestions.length - 1;
+    html += `<br><button onclick="${isLast ? 'submitAll()' : 'nextFeedback()'}">${isLast ? 'Submit' : 'Next'}</button>`;
+    container.innerHTML = html;
+}
+
+function nextFeedback() {
+    const q = feedbackQuestions[feedbackStep];
+    const val = document.getElementById("fb").value;
+    feedback[q.id] = val;
+
+    feedbackStep++;
+
+    if (feedbackStep < feedbackQuestions.length) {
+        feedbackFlow();
+    }
+}
+
+function submitAll() {
+    const q = feedbackQuestions[feedbackStep];
+    const val = document.getElementById("fb").value;
+    feedback[q.id] = val;
+
+    const payload = {
+        ...answers,
+        ...feedback
+    };
+
+    // Send to Google Sheets
+    fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    }).catch(err => {
+        console.error("Error sending to Google Sheets", err);
+    });
+
+    endScreen();
+}
+
+function endScreen() {
+    document.getElementById("container").innerHTML =
+        `<div class='question'>Thank you for using YieldWise CD Finder</div>
+         <div class='small-text'>Your feedback has been recorded.</div>`;
+}
+
+// Start
+renderQuestion();
+</script>
+
+</body>
+</html>
